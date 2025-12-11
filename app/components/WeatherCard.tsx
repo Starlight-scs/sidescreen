@@ -87,7 +87,7 @@ const WeatherCard: React.FC = () => {
           src={`${data.weatherCondition.iconBaseUri}.svg`}
           alt={desc}
           style={{
-            width: 60,
+            width: 90,
             height: 60,
             // color version (no grayscale)
             filter: "brightness(1.1)",
