@@ -29,13 +29,6 @@ export default function CalendarPanel() {
           </p>
         )}
       </div>
-
-      {/* WEATHER SECTION */}
-      <div className="flex justify-center mt-1">
-        <div className="scale-[0.88] origin-top">
-          <WeatherCard />
-        </div>
-      </div>
     </div>
   );
 }

@@ -8,35 +8,26 @@ export default function HomePage() {
   return (
     <div className="flex items-center justify-center w-screen h-screen bg-black text-white">
       {/* MAIN CONTAINER */}
-      <div
-        className="flex flex-col items-center justify-between
-                   bg-black border border-neutral-700 rounded-lg overflow-hidden shadow-md"
-        style={{
-          width: '320px',
-          height: '740px',
-        }}
-      >
-        {/* Header */}
-        <div className="py-2 w-full text-center border-b border-neutral-700 bg-black">
-          <h1 className="text-xl font-bold tracking-wide text-white">
+      <div className="flex flex-col w-full h-full bg-black overflow-hidden">
+        <main className="flex flex-col flex-1 h-full">
+          {/* CLOCK — 20% of height */}
+          <section className="flex items-center justify-center border-b border-neutral-800" style={{ height: '20%' }}>
+            <ClockCard />
+          </section>
 
-          </h1>
-        </div>
+          {/* BOTTOM SECTION — remaining 80% split between calendar and weather */}
+          <section className="flex flex-col flex-1" style={{ height: '80%' }}>
+            {/* CALENDAR (60% of lower area) */}
+            <div className="flex items-center justify-center border-b border-neutral-800" style={{ height: '60%' }}>
+              <CalendarPanel />
+            </div>
 
-        {/* CLOCK */}
-        <div className="w-full flex-1 flex items-center justify-center bg-black border-b border-neutral-800">
-          <ClockCard />
-        </div>
-
-        {/* CALENDAR */}
-        <div className="w-full flex-1 flex items-center justify-center bg-black border-b border-neutral-800">
-          <CalendarPanel />
-        </div>
-
-        {/* WEATHER */}
-        <div className="w-full flex-1 flex items-center justify-center bg-black">
-          <WeatherCard />
-        </div>
+            {/* WEATHER (40% of lower area) */}
+            <div className="flex items-center justify-center" style={{ height: '40%' }}>
+              <WeatherCard />
+            </div>
+          </section>
+        </main>
       </div>
     </div>
   );

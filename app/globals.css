@@ -126,7 +126,7 @@
   --rdp-accent-color: white !important;
   --rdp-accent-background-color: white !important;
   --rdp-background-color: black !important;
-  --rdp-cell-size: 2rem;
+  --rdp-cell-size: 4rem;
 }
 
 .rdp-day_selected,
