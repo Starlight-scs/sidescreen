@@ -51,25 +51,33 @@ const WeatherCard: React.FC = () => {
     fetchWeather();
   }, []);
 
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <div className="bg-neutral-800 p-2 rounded-lg shadow-lg border border-neutral-700 text-white w-full max-w-[85%] mt-6 mx-auto">
+      {children}
+    </div>
+  );
+
   if (loading)
     return (
-      <div className="bg-neutral-800 p-4 rounded-lg shadow-lg border border-neutral-700 text-white w-[280px] text-center">
-        Loading weather data...
-      </div>
+      <Wrapper>
+        <div className="text-center text-neutral-300">
+          Loading weather data...
+        </div>
+      </Wrapper>
     );
 
   if (error)
     return (
-      <div className="bg-neutral-800 p-4 rounded-lg shadow-lg border border-neutral-700 text-red-400 w-[280px] text-center">
-        Error: {error}
-      </div>
+      <Wrapper>
+        <div className="text-center text-red-400">Error: {error}</div>
+      </Wrapper>
     );
 
   if (!data)
     return (
-      <div className="bg-neutral-800 p-4 rounded-lg shadow-lg border border-neutral-700 text-neutral-400 w-[280px] text-center">
-        No data available
-      </div>
+      <Wrapper>
+        <div className="text-center text-neutral-400">No data available</div>
+      </Wrapper>
     );
 
   const tempF = toF(data.temperature.degrees).toFixed(1);
@@ -78,34 +86,44 @@ const WeatherCard: React.FC = () => {
   const windMph = toMph(data.wind.speed.value);
   const humidity = `${data.relativeHumidity}%`;
 
+  // Detect color support (some Google URIs end in "_color" or include a "color" param)
+  const iconUri = data.weatherCondition.iconBaseUri;
+  const isColorIcon = iconUri.toLowerCase().includes("color");
+
   return (
-    <Card className="bg-neutral-800 p-4 rounded-lg shadow-lg border border-neutral-700 text-white w-[280px]">
-      <CardContent className="flex flex-col items-center space-y-3 p-0">
+    <Card className="bg-neutral-800 rounded-lg shadow-lg border border-neutral-700 text-white w-full max-w-[65%] mt-6 mx-auto p-3">
+      <CardContent className="flex flex-col items-center space-y-.5 p-1">
         <h3 className="text-lg font-semibold text-center">Decatur, Illinois</h3>
 
-        <img
-          src={`${data.weatherCondition.iconBaseUri}.svg`}
-          alt={desc}
-          style={{
-            width: 90,
-            height: 60,
-            // color version (no grayscale)
-            filter: "brightness(1.1)",
-          }}
-        />
+        {/* WEATHER ICON */}
+        <div className="flex items-center justify-center">
+          <img
+            src={`${iconUri}.svg`}
+            alt={desc}
+            className="transition-transform duration-200 hover:scale-105"
+            style={{
+              width: 60,
+              height: 60,
+              // if colored, show it as-is; otherwise apply slight brightness
+              filter: isColorIcon ? "none" : "brightness(1.2)",
+            }}
+          />
+        </div>
 
-        <p className="text-3xl font-bold">{tempF}°F</p>
-        <p className="text-sm text-neutral-400">Feels like {feelsF}°F</p>
+        <p className="text-4xl font-bold">{tempF}°F</p>
+        <p className="text-sm text-neutral-400 font-bold">
+          Feels like {feelsF}°F
+        </p>
         <p className="italic text-neutral-300">{desc}</p>
 
-        <div className="w-full border-t border-neutral-700 pt-3 text-sm space-y-1">
-          <div className="flex justify-between">
-            <span className="text-neutral-300">Wind</span>
-            <span className="text-neutral-100">{windMph} mph</span>
+        <div className="w-full border-t border-neutral-700 pt-3 text-sm">
+          <div className="flex justify-center font-bold">
+            <span className="text-neutral-300 p-1">Wind</span>
+            <span className="text-neutral-100 p-1">{windMph} mph</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-neutral-300">Humidity</span>
-            <span className="text-neutral-100">{humidity}</span>
+          <div className="flex justify-center font-bold">
+            <span className="text-neutral-300 p-1">Humidity</span>
+            <span className="text-neutral-100 p-1">{humidity}</span>
           </div>
         </div>
       </CardContent>
