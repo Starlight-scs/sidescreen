@@ -8,7 +8,7 @@ export default function HomePage() {
   return (
     <div className="flex items-center justify-center w-screen h-screen bg-black text-white">
       {/* OUTER WRAPPER — 30% width, 100% height */}
-      <div className="flex flex-col h-screen w-[30%] bg-black overflow-hidden border border-neutral-800 rounded-lg shadow-lg">
+      <div className="flex flex-col h-screen w-[60%] bg-black overflow-hidden border border-neutral-800 rounded-lg shadow-lg">
         <main className="flex flex-col flex-1 h-full">
           {/* CLOCK — 20% of the wrapper height */}
           <section
