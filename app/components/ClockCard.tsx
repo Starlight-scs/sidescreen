@@ -16,7 +16,7 @@ export function ClockCard() {
 
   return (
     <div className="flex flex-col items-center justify-center p-4 text-white">
-      <p className="text-7xl font-mono tracking-tight">
+      <p className="text-5xl font-mono tracking-tight">
         {time.toLocaleTimeString()}
       </p>
       <p className="text-lg text-gray-400 uppercase">

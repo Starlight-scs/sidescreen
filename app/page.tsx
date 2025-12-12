@@ -13,7 +13,7 @@ export default function HomePage() {
           {/* CLOCK */}
           <section className="flex items-center justify-center flex-[2] border-b border-neutral-800">
             <div className="h-[85%] w-[85%] flex items-center justify-center border border-neutral-700 rounded-lg bg-neutral-900/20">
-              <div className="text-6xl md:text-8xl font-bold">
+              <div className="text-5xl md:text-6xl font-bold">
                 <ClockCard />
               </div>
             </div>
@@ -39,7 +39,7 @@ export default function HomePage() {
 
           {/* BUILDING MAP */}
             <section className="flex items-center justify-center flex-[3]">
-  <div className="h-[90%] w-[92%] border border-neutral-700 rounded-lg overflow-hidden bg-neutral-900/20">
+  <div className="h-[90%] w-[95%] border border-neutral-700 rounded-lg overflow-hidden bg-neutral-900/20">
     <div className="h-full w-full grid place-items-center">
       <img
         src="/132%20S%20Water%20St%20Screen_2.png"
