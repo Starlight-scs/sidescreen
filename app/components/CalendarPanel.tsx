@@ -14,7 +14,7 @@ export default function CalendarPanel() {
 
       {/* CALENDAR SECTION */}
       <div className="flex flex-col items-center">
-        <div className="scale-[1.8] origin-top">
+        <div className="scale-[1.9] origin-top">
           <Calendar
             mode="single"
             selected={date}

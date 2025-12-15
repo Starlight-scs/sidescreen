@@ -91,8 +91,8 @@ const WeatherCard: React.FC = () => {
   const isColorIcon = iconUri.toLowerCase().includes("color");
 
   return (
-    <Card className="bg-neutral-800 rounded-lg shadow-lg border border-neutral-700 text-white w-full max-w-[85%] mt-6 mx-auto p-3">
-      <CardContent className="flex flex-col items-center space-y-.5 p-1">
+    <Card className="bg-neutral-800 rounded-lg shadow-lg border border-neutral-700 text-white w-full max-w-[95%] mt-6 mx-auto p-6">
+      <CardContent className="flex flex-col items-center space-y-.6 p-1">
         <h3 className="text-lg font-semibold text-center">Decatur, Illinois</h3>
 
         {/* WEATHER ICON */}
