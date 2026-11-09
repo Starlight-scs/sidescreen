@@ -17,15 +17,42 @@ interface GoogleWeatherResponse {
   relativeHumidity: number;
 }
 
+interface ForecastDay {
+  displayDate: { year: number; month: number; day: number };
+  maxTemperature?: { degrees: number; unit: string };
+  minTemperature?: { degrees: number; unit: string };
+  daytimeForecast?: {
+    weatherCondition?: { iconBaseUri: string; description: { text: string } };
+    precipitation?: { probability?: { percent: number } };
+  };
+}
+
+interface ForecastResponse {
+  forecastDays: ForecastDay[];
+}
+
 // Lobby screens stay open for days without a reload, so the card must refresh
-// itself. 10 min keeps us far inside the Google Weather API free quota.
-const REFRESH_MS = 10 * 60 * 1000;
+// itself. 30 min for current conditions keeps us far inside the free quota.
+const REFRESH_MS = 30 * 60 * 1000;
+// The 5-day outlook barely moves — 3 hours is plenty and costs ~8 calls/day.
+const FORECAST_REFRESH_MS = 3 * 60 * 60 * 1000;
 // If the newest successful reading gets older than this, say so on screen
 // rather than silently presenting stale weather as current.
-const STALE_MS = 35 * 60 * 1000;
+const STALE_MS = 95 * 60 * 1000;
+
+const LAT = 39.8403;
+const LNG = -88.9548;
+
+// Google returns IMPERIAL when asked, but never trust the unit blindly.
+const asF = (t?: { degrees: number; unit: string }) => {
+  if (!t) return null;
+  const u = (t.unit || "").toUpperCase();
+  return u.startsWith("C") ? t.degrees * (9 / 5) + 32 : t.degrees;
+};
 
 const WeatherCard: React.FC = () => {
   const [data, setData] = useState<GoogleWeatherResponse | null>(null);
+  const [days, setDays] = useState<ForecastDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -33,16 +60,14 @@ const WeatherCard: React.FC = () => {
 
   // Guards against overlapping fetches (interval + visibility can race).
   const inFlight = useRef(false);
+  const forecastInFlight = useRef(false);
 
   const fetchWeather = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
       const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      const lat = 39.8403;
-      const lng = -88.9548;
-
-      const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${apiKey}&location.latitude=${lat}&location.longitude=${lng}`;
+      const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${apiKey}&location.latitude=${LAT}&location.longitude=${LNG}`;
       const res = await fetch(url, { cache: "no-store" });
       const json = await res.json();
 
@@ -63,11 +88,32 @@ const WeatherCard: React.FC = () => {
     }
   }, []);
 
+  const fetchForecast = useCallback(async () => {
+    if (forecastInFlight.current) return;
+    forecastInFlight.current = true;
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      const url = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${apiKey}&location.latitude=${LAT}&location.longitude=${LNG}&days=5&unitsSystem=IMPERIAL`;
+      const res = await fetch(url, { cache: "no-store" });
+      const json: ForecastResponse = await res.json();
+      if (!res.ok) throw new Error("forecast lookup failed");
+      // Keep the previous strip if a refresh comes back empty.
+      if (Array.isArray(json.forecastDays) && json.forecastDays.length)
+        setDays(json.forecastDays.slice(0, 5));
+    } catch {
+      // Non-fatal: the current-conditions row still carries the panel.
+    } finally {
+      forecastInFlight.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     setNow(new Date());
     fetchWeather();
+    fetchForecast();
 
     const poll = setInterval(fetchWeather, REFRESH_MS);
+    const forecastPoll = setInterval(fetchForecast, FORECAST_REFRESH_MS);
     // Drives the "updated / stale" label without re-fetching.
     const tick = setInterval(() => setNow(new Date()), 30 * 1000);
 
@@ -81,14 +127,14 @@ const WeatherCard: React.FC = () => {
 
     return () => {
       clearInterval(poll);
+      clearInterval(forecastPoll);
       clearInterval(tick);
       document.removeEventListener("visibilitychange", catchUp);
       window.removeEventListener("focus", catchUp);
       window.removeEventListener("online", fetchWeather);
     };
-  }, [fetchWeather]);
+  }, [fetchWeather, fetchForecast]);
 
-  const toF = (celsius: number) => celsius * (9 / 5) + 32;
   const toMph = (kmh: number) => (kmh / 1.609).toFixed(0);
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -116,13 +162,12 @@ const WeatherCard: React.FC = () => {
       </Wrapper>
     );
 
-  const tempF = toF(data.temperature.degrees).toFixed(1);
-  const feelsF = toF(data.feelsLikeTemperature.degrees).toFixed(1);
+  const tempF = (asF(data.temperature) ?? 0).toFixed(0);
+  const feelsF = (asF(data.feelsLikeTemperature) ?? 0).toFixed(0);
   const desc = data.weatherCondition.description.text;
   const windMph = toMph(data.wind.speed.value);
   const humidity = `${data.relativeHumidity}%`;
 
-  // Detect color support (some Google URIs end in "_color" or include a "color" param)
   const iconUri = data.weatherCondition.iconBaseUri;
   const isColorIcon = iconUri.toLowerCase().includes("color");
 
@@ -136,42 +181,92 @@ const WeatherCard: React.FC = () => {
       ? "just now"
       : `${Math.floor(ageMs / 60000)} min ago`;
 
+  const dayLabel = (d: ForecastDay, i: number) => {
+    if (i === 0) return "Today";
+    const dt = new Date(
+      d.displayDate.year,
+      d.displayDate.month - 1,
+      d.displayDate.day
+    );
+    return dt.toLocaleDateString("en-US", { weekday: "short" });
+  };
+
   return (
-    <Card className="bg-neutral-800 rounded-lg shadow-lg border border-neutral-700 text-white w-full max-w-[95%] mt-6 mx-auto p-6">
-      <CardContent className="flex flex-col items-center space-y-.6 p-1">
+    <Card className="bg-neutral-800 rounded-lg shadow-lg border border-neutral-700 text-white w-full max-w-[95%] mx-auto p-4">
+      <CardContent className="flex flex-col items-center p-1">
         <h3 className="text-lg font-semibold text-center">Decatur, Illinois</h3>
 
-        {/* WEATHER ICON */}
-        <div className="flex items-center justify-center">
+        {/* CURRENT CONDITIONS — one compact row */}
+        <div className="flex items-center justify-center gap-4 mt-1">
           <img
             src={`${iconUri}.svg`}
             alt={desc}
-            className="transition-transform duration-200 hover:scale-105"
             style={{
-              width: 60,
-              height: 60,
-              // if colored, show it as-is; otherwise apply slight brightness
+              width: 52,
+              height: 52,
               filter: isColorIcon ? "none" : "brightness(1.2)",
             }}
           />
-        </div>
-
-        <p className="text-4xl font-bold">{tempF}°F</p>
-        <p className="text-sm text-neutral-400 font-bold">
-          Feels like {feelsF}°F
-        </p>
-        <p className="italic text-neutral-300">{desc}</p>
-
-        <div className="w-full border-t border-neutral-700 pt-3 text-sm">
-          <div className="flex justify-center font-bold">
-            <span className="text-neutral-300 p-1">Wind</span>
-            <span className="text-neutral-100 p-1">{windMph} mph</span>
+          <div className="flex flex-col items-start leading-tight">
+            <p className="text-4xl font-bold">{tempF}°F</p>
+            <p className="text-xs text-neutral-400 font-semibold">
+              Feels like {feelsF}°F
+            </p>
           </div>
-          <div className="flex justify-center font-bold">
-            <span className="text-neutral-300 p-1">Humidity</span>
-            <span className="text-neutral-100 p-1">{humidity}</span>
+          <div className="flex flex-col items-start text-xs text-neutral-300 border-l border-neutral-700 pl-4 leading-relaxed">
+            <span className="italic text-neutral-300">{desc}</span>
+            <span>
+              <span className="text-neutral-500">Wind</span> {windMph} mph
+            </span>
+            <span>
+              <span className="text-neutral-500">Humidity</span> {humidity}
+            </span>
           </div>
         </div>
+
+        {/* 5-DAY OUTLOOK */}
+        {days.length > 0 && (
+          <div className="w-full border-t border-neutral-700 mt-3 pt-3">
+            <div className="grid grid-cols-5 gap-1">
+              {days.map((d, i) => {
+                const hi = asF(d.maxTemperature);
+                const lo = asF(d.minTemperature);
+                const cond = d.daytimeForecast?.weatherCondition;
+                const pop = d.daytimeForecast?.precipitation?.probability?.percent;
+                return (
+                  <div
+                    key={`${d.displayDate.month}-${d.displayDate.day}`}
+                    className="flex flex-col items-center gap-0.5"
+                  >
+                    <span
+                      className={`text-xs font-semibold ${
+                        i === 0 ? "text-white" : "text-neutral-400"
+                      }`}
+                    >
+                      {dayLabel(d, i)}
+                    </span>
+                    {cond && (
+                      <img
+                        src={`${cond.iconBaseUri}.svg`}
+                        alt={cond.description.text}
+                        style={{ width: 32, height: 32 }}
+                      />
+                    )}
+                    <span className="text-sm font-bold leading-none">
+                      {hi !== null ? `${hi.toFixed(0)}°` : "--"}
+                    </span>
+                    <span className="text-xs text-neutral-500 leading-none">
+                      {lo !== null ? `${lo.toFixed(0)}°` : "--"}
+                    </span>
+                    <span className="text-[10px] text-sky-400 h-3">
+                      {typeof pop === "number" && pop > 0 ? `${pop}%` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {ageLabel && (
           <p
